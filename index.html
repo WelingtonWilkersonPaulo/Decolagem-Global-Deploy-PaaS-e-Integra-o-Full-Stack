@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider-AI Cloud 🕸️</title>
+    <style>
+        /* Estilo Aranha */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .chat-container { background: #fff; width: 450px; height: 600px; border-radius: 20px; border: 5px solid #e23636; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 30px rgba(226, 54, 54, 0.4); }
+        header { background: #e23636; color: white; padding: 20px; text-align: center; border-bottom: 3px solid #005a9c; }
+        header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        #historico { flex: 1; padding: 20px; overflow-y: auto; background: #f4f4f4; display: flex; flex-direction: column; gap: 15px; }
+        
+        /* Balões de Mensagem */
+        .msg { padding: 12px 18px; border-radius: 15px; max-width: 85%; font-size: 15px; line-height: 1.4; position: relative; }
+        .user { background: #005a9c; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .bot { background: #e23636; color: white; align-self: flex-start; border-bottom-left-radius: 2px; }
+        
+        /* Área de Input */
+        .input-area { display: flex; padding: 15px; background: #fff; border-top: 2px solid #ddd; }
+        input { flex: 1; padding: 12px; border: 2px solid #005a9c; border-radius: 8px; outline: none; font-size: 14px; }
+        button { background: #e23636; color: white; border: none; padding: 0 20px; margin-left: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #005a9c; transform: scale(1.05); }
+
+        /* Link do PDF */
+        .pdf-link { display: inline-block; margin-top: 8px; background: #ffd700; color: #333; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-weight: bold; font-size: 12px; border: 1px solid #333; }
+        .pdf-link:hover { background: #fff; }
+        
+        /* Scrollbar Personalizada */
+        #historico::-webkit-scrollbar { width: 6px; }
+        #historico::-webkit-scrollbar-thumb { background: #005a9c; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <header>
+            <h1>🕸️ Spider-Chat</h1>
+            <small>Amigão da Vizinhança na Nuvem</small>
+        </header>
+
+        <div id="historico"></div>
+
+        <div class="input-area">
+            <input type="text" id="pergunta" placeholder="Diga algo ao Aranha..." onkeypress="if(event.key === 'Enter') enviarMensagem()">
+            <button onclick="enviarMensagem()">ENVIAR</button>
+        </div>
+    </div>
+
+    <script>
+        // 🚨 IMPORTANTE: Troque pelo seu link do Render!
+        const URL_BASE = "https://COLE-AQUI-O-SEU-LINK-DO-RENDER.onrender.com";
+        const URL_API = `${URL_BASE}/api/chat`;
+
+        async function enviarMensagem() {
+            const input = document.getElementById("pergunta");
+            const historico = document.getElementById("historico");
+            const texto = input.value.trim();
+
+            if (!texto) return;
+
+            // 1. Adiciona sua mensagem na tela
+            historico.innerHTML += `<div class="msg user"><b>Você:</b> ${texto}</div>`;
+            input.value = "";
+            
+            // 2. Cria balão de carregamento
+            const loadingId = "loading-" + Date.now();
+            historico.innerHTML += `<div class="msg bot" id="${loadingId}"><i>🕸️ Captando sentido aranha...</i></div>`;
+            historico.scrollTop = historico.scrollHeight;
+
+            try {
+                // 3. Faz a requisição para o seu servidor no Render
+                const response = await fetch(URL_API, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pergunta: texto })
+                });
+
+                const dados = await response.json();
+                
+                // Remove o carregamento
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) loadingElement.remove();
+
+                if (dados.sucesso) {
+                    // 4. Mostra a resposta e o link do PDF
+                    historico.innerHTML += `
+                        <div class="msg bot">
+                            <b>Aranha:</b> ${dados.resposta}
+                            <br>
+                            <a href="${URL_BASE}${dados.pdfUrl}" target="_blank" class="pdf-link">📥 Baixar Relatório de Missão</a>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(dados.erro);
+                }
+
+            } catch (erro) {
+                console.error(erro);
+                const loadingElement = document.getElementById(loadingId);
+                if (loadingElement) {
+                    loadingElement.innerHTML = "<b>Erro:</b> O Duende Verde cortou os cabos! Tente novamente em instantes.";
+                }
+            }
+
+            // Rola para o fim
+            historico.scrollTop = historico.scrollHeight;
+        }
+    </script>
+</body>
+</html>
