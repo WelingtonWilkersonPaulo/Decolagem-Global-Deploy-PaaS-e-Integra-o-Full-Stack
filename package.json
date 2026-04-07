@@ -9,11 +9,11 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "API do Homem-Aranha na Nuvem",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.6",
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "pdfkit": "^0.18.0"
   }

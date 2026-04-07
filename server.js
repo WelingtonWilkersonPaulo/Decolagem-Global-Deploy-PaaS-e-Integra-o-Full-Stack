@@ -2,91 +2,75 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 
 const app = express();
-app.use(cors());
-app.use(express.json()); // Essencial para o req.body funcionar
 
-// Garante que as pastas existam
-const downloadsPath = path.join(__dirname, 'downloads');
-if (!fs.existsSync(downloadsPath)) fs.mkdirSync(downloadsPath);
+// --- CONFIGURAÇÕES DE MIDDLEWARE (IMPORTANTE PARA PRODUÇÃO) ---
+app.use(cors()); // Permite que seu Front-end (Vercel/GitHub Pages) acesse o Back-end (Render)
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static('public'));
-app.use('/downloads', express.static('downloads'));
-
+// Inicialização da IA com a chave que será configurada no Painel do Render
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Função para gerar o PDF
-function criarPdfMissao(pergunta, resposta) {
-    return new Promise((resolve, reject) => {
-        const doc = new PDFDocument();
-        const fileName = `missao_${Date.now()}.pdf`;
-        const filePath = path.join(downloadsPath, fileName);
-        const stream = fs.createWriteStream(filePath);
-
-        doc.pipe(stream);
-        doc.fillColor('red').fontSize(22).text("Relatório do Amigão da Vizinhança", { align: 'center' });
-        doc.moveDown();
-        doc.fillColor('black').fontSize(12).text(`Pergunta: ${pergunta}`);
-        doc.moveDown();
-        doc.text(`Resposta: ${resposta}`);
-        doc.end();
-
-        stream.on('finish', () => resolve(fileName));
-        stream.on('error', reject);
-    });
-}
-
-// --- ROTAS DA ATIVIDADE ---
-
-// Desafio Extra: Rota de Status (GET)
+// --- ROTA DE STATUS (GET) - Exigência do Professor para conferência ---
 app.get('/api/status', (req, res) => {
-    res.json({ status: "Servidor da IA Operacional 🕸️" });
+    res.status(200).json({ 
+        status: "Servidor da IA Operacional na Nuvem (Render)",
+        agente: "Homem-Aranha 🕸️",
+        modelo: "Gemini 2.5 Flash",
+        ambiente: "Produção"
+    });
 });
 
-// Rota Principal: Chat (POST)
+// --- ROTA DE CHAT (POST) - A alma do Agente Inteligente ---
 app.post('/api/chat', async (req, res) => {
     try {
-        // 1. Recebe a 'pergunta' do corpo da requisição (Requisito da Atividade)
-        const { pergunta } = req.body;
-
-        // 2. Tratamento de erro (Requisito da Atividade)
-        if (!pergunta) {
-            return res.status(400).json({ erro: "Você precisa enviar uma 'pergunta' no formato JSON." });
+        // 1. Validação dos dados de entrada (Critério de Aceite: Status 400)
+        if (!req.body || !req.body.pergunta) {
+            return res.status(400).json({ 
+                erro: "Requisição inválida. Envie o campo 'pergunta' no formato JSON." 
+            });
         }
 
-        console.log(`📩 Pergunta do cidadão: "${pergunta}"`);
+        const { pergunta } = req.body;
+        console.log(`📩 Pergunta recebida na nuvem: ${pergunta}`);
 
-        // 3. Configuração da IA (Usando gemini-1.5-flash conforme pedido)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const persona = "Você é o Homem-Aranha. Responda de forma heróica e engraçada, use gírias de teia.";
+        // 2. Configuração do Modelo Atualizado (Gemini 2.5 Flash)
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
+
+        const persona = "Você é o Homem-Aranha. Responda de forma heróica, engraçada e use gírias de teia e sentido aranha.";
         
         const result = await model.generateContent(`${persona}\nPergunta: ${pergunta}`);
-        const textoResposta = result.response.text();
+        const respostaDaIA = result.response.text();
 
-        // 4. Gera o PDF (Mantendo seu recurso extra)
-        const pdfFile = await criarPdfMissao(pergunta, textoResposta);
+        console.log("🤖 IA Respondeu com sucesso via Render!");
 
-        // 5. Devolve o JSON no formato solicitado (Requisito: sucesso e resposta)
+        // 3. Resposta de Sucesso (Critério de Aceite: Status 200 e campo 'resposta')
         return res.status(200).json({ 
             sucesso: true,
-            resposta: textoResposta,
-            pdfUrl: `/downloads/${pdfFile}` 
+            resposta: respostaDaIA 
         });
 
     } catch (error) {
-        console.error("❌ Erro:", error.message);
-        return res.status(500).json({ erro: "Erro interno no servidor de IA." });
+        console.error("❌ Erro no Servidor Cloud:", error.message);
+
+        // Tratamento de limite de requisições (Status 429)
+        if (error.message.includes("429")) {
+            return res.status(429).json({ 
+                erro: "O sentido aranha avisou: limite de requisições excedido. Tente em alguns instantes." 
+            });
+        }
+
+        return res.status(500).json({ erro: "Erro interno ao processar a resposta da IA na nuvem." });
     }
 });
 
-// O Render define a porta automaticamente através de process.env.PORT
-// Se não houver essa variável (ex: rodando no seu PC), ele usa a 3000
+// --- LIGANDO O SERVIDOR (DINÂMICO PARA PAAS) ---
+// O Render define a porta automaticamente na variável process.env.PORT
 const PORTA = process.env.PORT || 3000;
 
 app.listen(PORTA, () => {
-    console.log(`🚀 O Aranha está patrulhando na porta ${PORTA}`);
+    console.log(`🚀 O Aranha está patrulhando globalmente na porta ${PORTA}`);
+    console.log(`📡 Rota disponível para o Front-end: /api/chat`);
 });
